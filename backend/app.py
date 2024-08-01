@@ -109,25 +109,25 @@ def delete_original(original_filename):
     db.session.commit()
     return jsonify({'message': 'Original video and all clips deleted'})
 
-@app.route('/api/rename_original', methods=['PUT'])
-def rename_original():
-    data = request.get_json()
-    old_name = data.get('old_name')
-    new_name = data.get('new_name')
-
-    clips = Clip.query.filter_by(original_filename=old_name).all()
-    for clip in clips:
+@app.route('/api/rename_clip/<int:clip_id>', methods=['PUT'])
+def rename_clip(clip_id):
+    new_name = request.json.get('new_name')
+    clip = Clip.query.get(clip_id)
+    if clip:
+        # Ensure new_name does not have invalid file characters
+        new_name = new_name.replace(" ", "_") + ".mp4"
+        new_clip_filename = new_name
         old_clip_path = os.path.join(CLIP_FOLDER, clip.clip_filename)
-        new_clip_filename = new_name + clip.clip_filename[len(old_name):]
         new_clip_path = os.path.join(CLIP_FOLDER, new_clip_filename)
 
         if os.path.exists(old_clip_path):
             os.rename(old_clip_path, new_clip_path)
 
         clip.clip_filename = new_clip_filename
-        clip.original_filename = new_name
         db.session.commit()
-    return jsonify({'message': 'Original video and all clips renamed'})
+        return jsonify({'message': 'Clip renamed'})
+    else:
+        return jsonify({'error': 'Clip not found'}), 404
 
 if __name__ == '__main__':
     app.run(port=3001, debug=True)
